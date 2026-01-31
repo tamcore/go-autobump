@@ -41,7 +41,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Discover all go.mod files
-	goModFiles, err := scanner.DiscoverGoModFiles(cfg.Path)
+	goModFiles, err := scanner.DiscoverGoModFiles(cfg.Path, cfg.Exclude...)
 	if err != nil {
 		return fmt.Errorf("failed to discover go.mod files: %w", err)
 	}

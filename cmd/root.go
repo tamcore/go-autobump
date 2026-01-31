@@ -36,6 +36,7 @@ func init() {
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./.autobump.yaml)")
 	rootCmd.PersistentFlags().String("path", ".", "target directory to scan")
+	rootCmd.PersistentFlags().StringSlice("exclude", []string{}, "glob patterns to exclude (e.g., 'examples/*/go.mod')")
 	rootCmd.PersistentFlags().Float64("cvss-threshold", 7.0, "minimum CVSS score to act on")
 	rootCmd.PersistentFlags().Bool("dry-run", false, "preview changes without applying them")
 	rootCmd.PersistentFlags().Bool("skip-tidy", false, "skip running 'go mod tidy' after updates")
@@ -52,6 +53,7 @@ func init() {
 
 	// Bind flags to Viper
 	viper.BindPFlag("path", rootCmd.PersistentFlags().Lookup("path"))
+	viper.BindPFlag("exclude", rootCmd.PersistentFlags().Lookup("exclude"))
 	viper.BindPFlag("cvss-threshold", rootCmd.PersistentFlags().Lookup("cvss-threshold"))
 	viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
 	viper.BindPFlag("skip-tidy", rootCmd.PersistentFlags().Lookup("skip-tidy"))

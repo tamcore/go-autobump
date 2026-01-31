@@ -6,7 +6,8 @@ import (
 )
 
 // DiscoverGoModFiles recursively searches for all go.mod files under the given path
-func DiscoverGoModFiles(root string) ([]string, error) {
+// excludePatterns is a list of glob patterns to exclude (matched against relative paths)
+func DiscoverGoModFiles(root string, excludePatterns ...string) ([]string, error) {
 	var goModFiles []string
 
 	// Convert to absolute path
@@ -31,7 +32,30 @@ func DiscoverGoModFiles(root string) ([]string, error) {
 
 		// Check for go.mod files
 		if d.Name() == "go.mod" {
-			goModFiles = append(goModFiles, path)
+			// Get relative path for pattern matching
+			relPath, err := filepath.Rel(absRoot, path)
+			if err != nil {
+				relPath = path
+			}
+
+			// Check if path matches any exclude pattern
+			excluded := false
+			for _, pattern := range excludePatterns {
+				if matched, _ := filepath.Match(pattern, relPath); matched {
+					excluded = true
+					break
+				}
+				// Also try matching against the directory path
+				dirPath := filepath.Dir(relPath)
+				if matched, _ := filepath.Match(pattern, dirPath); matched {
+					excluded = true
+					break
+				}
+			}
+
+			if !excluded {
+				goModFiles = append(goModFiles, path)
+			}
 		}
 
 		return nil

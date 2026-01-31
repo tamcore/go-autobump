@@ -11,6 +11,9 @@ type Config struct {
 	// Path is the target directory to scan (default: ".")
 	Path string `mapstructure:"path"`
 
+	// Exclude is a list of glob patterns to exclude from scanning
+	Exclude []string `mapstructure:"exclude"`
+
 	// CVSSThreshold is the minimum CVSS score to act on (e.g., 7.0)
 	CVSSThreshold float64 `mapstructure:"cvss-threshold"`
 
@@ -49,6 +52,7 @@ type AIConfig struct {
 func Default() *Config {
 	return &Config{
 		Path:          ".",
+		Exclude:       []string{},
 		CVSSThreshold: 7.0,
 		SkipTidy:      false,
 		DryRun:        false,
@@ -67,6 +71,7 @@ func SetupViper() {
 	// Set default values
 	defaults := Default()
 	viper.SetDefault("path", defaults.Path)
+	viper.SetDefault("exclude", defaults.Exclude)
 	viper.SetDefault("cvss-threshold", defaults.CVSSThreshold)
 	viper.SetDefault("skip-tidy", defaults.SkipTidy)
 	viper.SetDefault("dry-run", defaults.DryRun)

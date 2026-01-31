@@ -4,6 +4,14 @@
 # Target directory to scan (default: current directory)
 path: "."
 
+# Exclude patterns for go.mod files (glob patterns)
+# Use this to skip scanning certain directories
+# Examples:
+#   - "vendor/**"           # Skip vendor directory
+#   - "examples/*/go.mod"   # Skip example modules
+#   - "testdata/**"         # Skip test data
+exclude: []
+
 # Minimum CVSS score threshold to act on (default: 7.0)
 # Vulnerabilities with scores below this threshold will be ignored
 cvss-threshold: 7.0
