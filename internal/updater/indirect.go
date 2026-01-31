@@ -260,13 +260,47 @@ func extractNamespace(modulePath string) string {
 	return parts[0]
 }
 
+// importPathToModulePath converts an import path (e.g., github.com/sigstore/sigstore-go/pkg/root)
+// to its module path (e.g., github.com/sigstore/sigstore-go) by matching against modules in go.mod
+func importPathToModulePath(goModPath, importPath string) string {
+	parser, err := gomod.NewParser(goModPath)
+	if err != nil {
+		return importPath // Fallback to original
+	}
+
+	// Get all dependencies and find the longest matching prefix
+	allDeps := append(parser.GetDirectDependencies(), parser.GetIndirectDependencies()...)
+
+	var bestMatch string
+	for _, dep := range allDeps {
+		// Check if the import path starts with this module path
+		if strings.HasPrefix(importPath, dep.Path) {
+			// Make sure it's a complete path segment match (not partial)
+			if len(importPath) == len(dep.Path) || importPath[len(dep.Path)] == '/' {
+				if len(dep.Path) > len(bestMatch) {
+					bestMatch = dep.Path
+				}
+			}
+		}
+	}
+
+	if bestMatch != "" {
+		return bestMatch
+	}
+	return importPath // Fallback to original
+}
+
 // updateDirectDepAndVerify updates a direct dependency to latest and runs tidy
 func updateDirectDepAndVerify(goModPath, directDep string, vuln trivy.Vulnerability, cfg *config.Config) error {
 	moduleDir := gomod.GetModuleDir(goModPath)
 
+	// Convert import path to module path if needed
+	// e.g., github.com/sigstore/sigstore-go/pkg/root -> github.com/sigstore/sigstore-go
+	modulePath := importPathToModulePath(goModPath, directDep)
+
 	// Update the direct dependency to latest
-	if err := gomod.GoGet(moduleDir, directDep, "latest"); err != nil {
-		return fmt.Errorf("failed to update %s: %w", directDep, err)
+	if err := gomod.GoGet(moduleDir, modulePath, "latest"); err != nil {
+		return fmt.Errorf("failed to update %s: %w", modulePath, err)
 	}
 
 	// Run go mod tidy
