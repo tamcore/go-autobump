@@ -65,22 +65,40 @@ func updateThroughDirectDep(goModPath string, vuln trivy.Vulnerability, cfg *con
 		return fmt.Errorf("failed to trace dependency chain: %w", err)
 	}
 
-	// If we couldn't find via go mod why, try finding related packages from the same org
-	if len(directDeps) == 0 {
-		fmt.Printf("  ℹ️  Could not trace via 'go mod why', searching for related packages...\n")
-		relatedDeps, err := findRelatedDirectDependencies(goModPath, vuln.PkgName)
-		if err != nil {
-			return fmt.Errorf("failed to find related dependencies: %w", err)
-		}
-		directDeps = relatedDeps
+	// Also find related packages from the same org (since multiple deps might pull in the vuln)
+	relatedDeps, err := findRelatedDirectDependencies(goModPath, vuln.PkgName)
+	if err != nil {
+		fmt.Printf("  ⚠️  Could not find related dependencies: %v\n", err)
 	}
 
-	if len(directDeps) == 0 {
+	// Merge and deduplicate: convert import paths to module paths first
+	seenModules := make(map[string]bool)
+	var allDeps []string
+
+	// Add deps from go mod why first (these are most directly related)
+	for _, dep := range directDeps {
+		modulePath := importPathToModulePath(goModPath, dep)
+		if !seenModules[modulePath] {
+			seenModules[modulePath] = true
+			allDeps = append(allDeps, modulePath)
+		}
+	}
+
+	// Then add related deps from same namespace
+	for _, dep := range relatedDeps {
+		modulePath := importPathToModulePath(goModPath, dep)
+		if !seenModules[modulePath] {
+			seenModules[modulePath] = true
+			allDeps = append(allDeps, modulePath)
+		}
+	}
+
+	if len(allDeps) == 0 {
 		return fmt.Errorf("could not find direct dependency that imports %s", vuln.PkgName)
 	}
 
 	// Try updating each related direct dependency until one succeeds in fixing the CVE
-	for _, directDep := range directDeps {
+	for _, directDep := range allDeps {
 		fmt.Printf("  📦 Trying to update related direct dep: %s\n", directDep)
 
 		if err := updateDirectDepAndVerify(goModPath, directDep, vuln, cfg); err != nil {
