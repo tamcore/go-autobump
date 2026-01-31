@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 )
 
 // ScanOptions configures the trivy scan behavior
@@ -13,11 +12,9 @@ type ScanOptions struct {
 	SkipDBUpdate bool
 }
 
-// Scan runs Trivy against the directory containing the go.mod file
+// Scan runs Trivy against the go.mod file
 // and returns parsed vulnerability results
 func Scan(goModPath string, opts ...ScanOptions) (ScanResult, error) {
-	moduleDir := filepath.Dir(goModPath)
-
 	// Build trivy command arguments
 	args := []string{
 		"fs",
@@ -31,7 +28,9 @@ func Scan(goModPath string, opts ...ScanOptions) (ScanResult, error) {
 		args = append(args, "--skip-db-update")
 	}
 
-	args = append(args, moduleDir)
+	// Scan the go.mod file directly, not the directory
+	// This prevents picking up vulnerabilities from nested go.mod files
+	args = append(args, goModPath)
 
 	cmd := exec.Command("trivy", args...)
 
