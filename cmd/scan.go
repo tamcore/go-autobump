@@ -58,10 +58,13 @@ func runScan(cmd *cobra.Command, args []string) error {
 
 	var allResults []trivy.ScanResult
 
+	// Prepare trivy scan options
+	scanOpts := trivy.ScanOptions{SkipDBUpdate: cfg.SkipTrivyDBUpdate}
+
 	for _, goModFile := range goModFiles {
 		fmt.Fprintf(os.Stderr, "Scanning %s...\n", goModFile)
 
-		result, err := trivy.Scan(goModFile)
+		result, err := trivy.Scan(goModFile, scanOpts)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to scan %s: %v\n", goModFile, err)
 			continue

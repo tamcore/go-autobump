@@ -36,7 +36,8 @@ func UpdateIndirect(goModPath string, vuln trivy.Vulnerability, cfg *config.Conf
 	}
 
 	// Step 3: Verify the CVE is fixed by rescanning
-	result, err := trivy.Scan(goModPath)
+	scanOpts := trivy.ScanOptions{SkipDBUpdate: cfg.SkipTrivyDBUpdate}
+	result, err := trivy.Scan(goModPath, scanOpts)
 	if err != nil {
 		return fmt.Errorf("verification scan failed: %w", err)
 	}
@@ -56,6 +57,7 @@ func UpdateIndirect(goModPath string, vuln trivy.Vulnerability, cfg *config.Conf
 // updateThroughDirectDep finds and updates the direct dependency that imports the vulnerable indirect dep
 func updateThroughDirectDep(goModPath string, vuln trivy.Vulnerability, cfg *config.Config) error {
 	moduleDir := gomod.GetModuleDir(goModPath)
+	scanOpts := trivy.ScanOptions{SkipDBUpdate: cfg.SkipTrivyDBUpdate}
 
 	// Find which direct dependency imports this indirect one
 	directDeps, err := gomod.FindDirectDependencyFor(moduleDir, vuln.PkgName)
@@ -87,7 +89,7 @@ func updateThroughDirectDep(goModPath string, vuln trivy.Vulnerability, cfg *con
 		}
 
 		// Check if the CVE is fixed
-		result, err := trivy.Scan(goModPath)
+		result, err := trivy.Scan(goModPath, scanOpts)
 		if err != nil {
 			continue
 		}

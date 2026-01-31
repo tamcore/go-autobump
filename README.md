@@ -112,6 +112,9 @@ cvss-threshold: 7.0
 # Skip running 'go mod tidy' after updates
 skip-tidy: false
 
+# Skip Trivy database update (use for faster repeated scans)
+skip-trivy-db-update: false
+
 # Preview changes without applying them
 dry-run: false
 
@@ -143,6 +146,7 @@ ai:
 | `--cvss-threshold` | Minimum CVSS score to act on | `7.0` |
 | `--dry-run` | Preview changes without applying | `false` |
 | `--skip-tidy` | Skip running go mod tidy | `false` |
+| `--skip-trivy-db-update` | Skip Trivy database update (use for faster repeated scans) | `false` |
 | `--allow-major` | Allow major version bumps | `false` |
 | `--generate-vex` | Generate VEX document for unfixed CVEs | `false` |
 | `--vex-output` | Output path for VEX document | `.vex.openvex.json` |

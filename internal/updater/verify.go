@@ -11,7 +11,8 @@ import (
 // Verify rescans the module after updates and reports remaining vulnerabilities
 func Verify(goModPath string, cfg *config.Config) error {
 	// Rescan with Trivy
-	result, err := trivy.Scan(goModPath)
+	scanOpts := trivy.ScanOptions{SkipDBUpdate: cfg.SkipTrivyDBUpdate}
+	result, err := trivy.Scan(goModPath, scanOpts)
 	if err != nil {
 		return fmt.Errorf("verification scan failed: %w", err)
 	}
@@ -39,8 +40,8 @@ func Verify(goModPath string, cfg *config.Config) error {
 }
 
 // VerifyVulnerabilityFixed checks if a specific vulnerability has been fixed
-func VerifyVulnerabilityFixed(goModPath string, vulnID, pkgName string, threshold float64) (bool, error) {
-	result, err := trivy.Scan(goModPath)
+func VerifyVulnerabilityFixed(goModPath string, vulnID, pkgName string, threshold float64, scanOpts trivy.ScanOptions) (bool, error) {
+	result, err := trivy.Scan(goModPath, scanOpts)
 	if err != nil {
 		return false, fmt.Errorf("verification scan failed: %w", err)
 	}

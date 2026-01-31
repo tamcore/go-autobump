@@ -8,21 +8,32 @@ import (
 	"path/filepath"
 )
 
+// ScanOptions configures the trivy scan behavior
+type ScanOptions struct {
+	SkipDBUpdate bool
+}
+
 // Scan runs Trivy against the directory containing the go.mod file
 // and returns parsed vulnerability results
-func Scan(goModPath string) (ScanResult, error) {
+func Scan(goModPath string, opts ...ScanOptions) (ScanResult, error) {
 	moduleDir := filepath.Dir(goModPath)
 
-	// Run trivy with JSON output
-	// Skip DB update during the scan to speed up repeated scans
-	// Users should run `trivy --download-db-only` separately to update the DB
-	cmd := exec.Command("trivy", "fs",
+	// Build trivy command arguments
+	args := []string{
+		"fs",
 		"--format", "json",
 		"--scanners", "vuln",
 		"--pkg-types", "library",
-		"--skip-db-update",
-		moduleDir,
-	)
+	}
+
+	// Check if we should skip DB update
+	if len(opts) > 0 && opts[0].SkipDBUpdate {
+		args = append(args, "--skip-db-update")
+	}
+
+	args = append(args, moduleDir)
+
+	cmd := exec.Command("trivy", args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

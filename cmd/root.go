@@ -42,6 +42,9 @@ func init() {
 	rootCmd.PersistentFlags().Bool("skip-tidy", false, "skip running 'go mod tidy' after updates")
 	rootCmd.PersistentFlags().Bool("allow-major", false, "allow major version bumps")
 
+	// Trivy configuration
+	rootCmd.PersistentFlags().Bool("skip-trivy-db-update", false, "skip downloading Trivy DB (use only if DB is pre-downloaded)")
+
 	// VEX generation flags
 	rootCmd.PersistentFlags().Bool("generate-vex", false, "generate VEX documents for unfixed CVEs")
 	rootCmd.PersistentFlags().String("vex-output", ".vex.openvex.json", "output path for VEX documents")
@@ -58,6 +61,7 @@ func init() {
 	_ = viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
 	_ = viper.BindPFlag("skip-tidy", rootCmd.PersistentFlags().Lookup("skip-tidy"))
 	_ = viper.BindPFlag("allow-major", rootCmd.PersistentFlags().Lookup("allow-major"))
+	_ = viper.BindPFlag("skip-trivy-db-update", rootCmd.PersistentFlags().Lookup("skip-trivy-db-update"))
 	_ = viper.BindPFlag("generate-vex", rootCmd.PersistentFlags().Lookup("generate-vex"))
 	_ = viper.BindPFlag("vex-output", rootCmd.PersistentFlags().Lookup("vex-output"))
 	_ = viper.BindPFlag("ai.api-key", rootCmd.PersistentFlags().Lookup("ai-api-key"))

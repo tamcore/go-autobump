@@ -34,6 +34,10 @@ type Config struct {
 
 	// AI configuration for VEX generation
 	AI AIConfig `mapstructure:"ai"`
+
+	// SkipTrivyDBUpdate skips downloading the Trivy vulnerability database
+	// Only use this if you've pre-downloaded the DB or for repeated local scans
+	SkipTrivyDBUpdate bool `mapstructure:"skip-trivy-db-update"`
 }
 
 // AIConfig holds configuration for the AI provider used for VEX generation
@@ -51,14 +55,15 @@ type AIConfig struct {
 // Default returns a Config with default values
 func Default() *Config {
 	return &Config{
-		Path:          ".",
-		Exclude:       []string{},
-		CVSSThreshold: 7.0,
-		SkipTidy:      false,
-		DryRun:        false,
-		AllowMajor:    false,
-		GenerateVEX:   false,
-		VEXOutput:     ".vex.openvex.json",
+		Path:              ".",
+		Exclude:           []string{},
+		CVSSThreshold:     7.0,
+		SkipTidy:          false,
+		DryRun:            false,
+		AllowMajor:        false,
+		GenerateVEX:       false,
+		SkipTrivyDBUpdate: false,
+		VEXOutput:         ".vex.openvex.json",
 		AI: AIConfig{
 			Endpoint: "https://api.openai.com/v1",
 			Model:    "gpt-4o",
