@@ -1,0 +1,45 @@
+# go-autobump configuration file
+# Place this file as .autobump.yaml in your project root or home directory
+
+# Target directory to scan (default: current directory)
+path: "."
+
+# Minimum CVSS score threshold to act on (default: 7.0)
+# Vulnerabilities with scores below this threshold will be ignored
+cvss-threshold: 7.0
+
+# Skip running 'go mod tidy' after updates (default: false)
+skip-tidy: false
+
+# Preview changes without applying them (default: false)
+dry-run: false
+
+# Allow major version bumps (e.g., v1 -> v2) (default: false)
+# Major version updates may require code changes due to API changes
+allow-major: false
+
+# Generate VEX documents for unfixed vulnerabilities (default: false)
+# When enabled, creates OpenVEX format documents compatible with trivy --vex openvex
+generate-vex: false
+
+# Output path for VEX documents (default: .vex.openvex.json)
+vex-output: ".vex.openvex.json"
+
+# AI configuration for automatic VEX justification generation
+# Supports OpenAI-compatible APIs (OpenAI, IONOS Modelhub, Azure OpenAI, etc.)
+ai:
+  # API key for the AI provider
+  # Can also be set via AUTOBUMP_AI_API_KEY environment variable
+  api-key: ""
+
+  # API endpoint (default: OpenAI)
+  # Examples:
+  #   OpenAI:        https://api.openai.com/v1
+  #   IONOS Modelhub: https://openai.inference.de-txl.ionos.com/v1
+  #   Azure OpenAI:  https://<resource>.openai.azure.com/openai/deployments/<deployment>
+  # Can also be set via AUTOBUMP_AI_ENDPOINT environment variable
+  endpoint: "https://api.openai.com/v1"
+
+  # Model identifier to use
+  # Can also be set via AUTOBUMP_AI_MODEL environment variable
+  model: "gpt-4o"
