@@ -294,3 +294,54 @@ func NormalizeVersion(version string) string {
 
 	return version
 }
+
+// HasMajorVersionModule checks if the go.mod already has a major version variant of the module.
+// For example, if vulnPkg is "github.com/foo/bar" (v1) and fixedVersion is "2.0.0",
+// this checks if "github.com/foo/bar/v2" exists in go.mod.
+// Go modules v2+ use semantic import versioning where the major version is part of the path.
+func (p *Parser) HasMajorVersionModule(vulnPkg, fixedVersion string) (bool, string) {
+	fixedMajor := extractMajor(fixedVersion)
+	if fixedMajor < 2 {
+		return false, ""
+	}
+
+	// Strip any existing version suffix from the package path (e.g., /v2, /v3)
+	basePath := stripMajorVersionSuffix(vulnPkg)
+
+	// Check if the target major version module exists
+	targetPath := fmt.Sprintf("%s/v%d", basePath, fixedMajor)
+
+	for _, req := range p.ModFile.Require {
+		if req.Mod.Path == targetPath {
+			return true, req.Mod.Version
+		}
+	}
+
+	return false, ""
+}
+
+// stripMajorVersionSuffix removes /v2, /v3, etc. from a module path
+func stripMajorVersionSuffix(path string) string {
+	// Check for /vN suffix where N >= 2
+	lastSlash := strings.LastIndex(path, "/")
+	if lastSlash == -1 {
+		return path
+	}
+
+	suffix := path[lastSlash+1:]
+	if len(suffix) >= 2 && suffix[0] == 'v' && suffix[1] >= '2' && suffix[1] <= '9' {
+		// Verify it's just digits after 'v'
+		allDigits := true
+		for _, c := range suffix[1:] {
+			if c < '0' || c > '9' {
+				allDigits = false
+				break
+			}
+		}
+		if allDigits {
+			return path[:lastSlash]
+		}
+	}
+
+	return path
+}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tamcore/go-autobump/internal/config"
+	"github.com/tamcore/go-autobump/internal/gomod"
 	"github.com/tamcore/go-autobump/internal/scanner"
 	"github.com/tamcore/go-autobump/internal/trivy"
 	"github.com/tamcore/go-autobump/internal/updater"
@@ -78,6 +79,12 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "  Found %d vulnerabilities above CVSS %.1f\n",
 			len(filtered.Vulnerabilities), cfg.CVSSThreshold)
 
+		// Parse go.mod to check for existing major version modules
+		parser, parseErr := gomod.NewParser(goModFile)
+		if parseErr != nil {
+			fmt.Fprintf(os.Stderr, "  Warning: failed to parse go.mod: %v\n", parseErr)
+		}
+
 		// Process each vulnerability
 		for _, vuln := range filtered.Vulnerabilities {
 			if vuln.FixedVersion == "" {
@@ -85,6 +92,17 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 					vuln.VulnerabilityID, vuln.PkgName)
 				unfixedVulns = append(unfixedVulns, vuln)
 				continue
+			}
+
+			// Check if the fixed major version module already exists in go.mod
+			// This handles cases where e.g. github.com/foo/bar v1.x is vulnerable,
+			// fixed in v2.x, and github.com/foo/bar/v2 is already present
+			if parser != nil {
+				if hasMajor, existingVer := parser.HasMajorVersionModule(vuln.PkgName, vuln.FixedVersion); hasMajor {
+					fmt.Fprintf(os.Stderr, "  ✅ %s in %s: already using major version module at %s\n",
+						vuln.VulnerabilityID, vuln.PkgName, existingVer)
+					continue
+				}
 			}
 
 			if cfg.DryRun {
