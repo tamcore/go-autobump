@@ -1,15 +1,1 @@
-# Binary
-go-autobump
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-
-# Test coverage
-coverage.out
-coverage.html
+.envrc
