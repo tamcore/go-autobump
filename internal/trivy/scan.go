@@ -14,10 +14,13 @@ func Scan(goModPath string) (ScanResult, error) {
 	moduleDir := filepath.Dir(goModPath)
 
 	// Run trivy with JSON output
+	// Skip DB update during the scan to speed up repeated scans
+	// Users should run `trivy --download-db-only` separately to update the DB
 	cmd := exec.Command("trivy", "fs",
 		"--format", "json",
 		"--scanners", "vuln",
 		"--pkg-types", "library",
+		"--skip-db-update",
 		moduleDir,
 	)
 

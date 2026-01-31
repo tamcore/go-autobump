@@ -77,6 +77,20 @@ func (p *Parser) GetDirectDependencies() []Dependency {
 	return deps
 }
 
+// GetIndirectDependencies returns all indirect dependencies
+func (p *Parser) GetIndirectDependencies() []Dependency {
+	var deps []Dependency
+	for _, req := range p.ModFile.Require {
+		if req.Indirect {
+			deps = append(deps, Dependency{
+				Path:    req.Mod.Path,
+				Version: req.Mod.Version,
+			})
+		}
+	}
+	return deps
+}
+
 // Dependency represents a Go module dependency
 type Dependency struct {
 	Path    string
@@ -255,7 +269,7 @@ func extractMajor(version string) int {
 	}
 
 	var major int
-	fmt.Sscanf(version, "%d", &major)
+	_, _ = fmt.Sscanf(version, "%d", &major)
 	return major
 }
 

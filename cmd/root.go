@@ -51,18 +51,18 @@ func init() {
 	rootCmd.PersistentFlags().String("ai-endpoint", "https://api.openai.com/v1", "AI API endpoint")
 	rootCmd.PersistentFlags().String("ai-model", "gpt-4o", "AI model to use")
 
-	// Bind flags to Viper
-	viper.BindPFlag("path", rootCmd.PersistentFlags().Lookup("path"))
-	viper.BindPFlag("exclude", rootCmd.PersistentFlags().Lookup("exclude"))
-	viper.BindPFlag("cvss-threshold", rootCmd.PersistentFlags().Lookup("cvss-threshold"))
-	viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
-	viper.BindPFlag("skip-tidy", rootCmd.PersistentFlags().Lookup("skip-tidy"))
-	viper.BindPFlag("allow-major", rootCmd.PersistentFlags().Lookup("allow-major"))
-	viper.BindPFlag("generate-vex", rootCmd.PersistentFlags().Lookup("generate-vex"))
-	viper.BindPFlag("vex-output", rootCmd.PersistentFlags().Lookup("vex-output"))
-	viper.BindPFlag("ai.api-key", rootCmd.PersistentFlags().Lookup("ai-api-key"))
-	viper.BindPFlag("ai.endpoint", rootCmd.PersistentFlags().Lookup("ai-endpoint"))
-	viper.BindPFlag("ai.model", rootCmd.PersistentFlags().Lookup("ai-model"))
+	// Bind flags to Viper (errors are ignored as these are non-critical)
+	_ = viper.BindPFlag("path", rootCmd.PersistentFlags().Lookup("path"))
+	_ = viper.BindPFlag("exclude", rootCmd.PersistentFlags().Lookup("exclude"))
+	_ = viper.BindPFlag("cvss-threshold", rootCmd.PersistentFlags().Lookup("cvss-threshold"))
+	_ = viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
+	_ = viper.BindPFlag("skip-tidy", rootCmd.PersistentFlags().Lookup("skip-tidy"))
+	_ = viper.BindPFlag("allow-major", rootCmd.PersistentFlags().Lookup("allow-major"))
+	_ = viper.BindPFlag("generate-vex", rootCmd.PersistentFlags().Lookup("generate-vex"))
+	_ = viper.BindPFlag("vex-output", rootCmd.PersistentFlags().Lookup("vex-output"))
+	_ = viper.BindPFlag("ai.api-key", rootCmd.PersistentFlags().Lookup("ai-api-key"))
+	_ = viper.BindPFlag("ai.endpoint", rootCmd.PersistentFlags().Lookup("ai-endpoint"))
+	_ = viper.BindPFlag("ai.model", rootCmd.PersistentFlags().Lookup("ai-model"))
 }
 
 func initConfig() {

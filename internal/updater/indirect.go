@@ -63,10 +63,50 @@ func updateThroughDirectDep(goModPath string, vuln trivy.Vulnerability, cfg *con
 		return fmt.Errorf("failed to trace dependency chain: %w", err)
 	}
 
+	// If we couldn't find via go mod why, try finding related packages from the same org
+	if len(directDeps) == 0 {
+		fmt.Printf("  ℹ️  Could not trace via 'go mod why', searching for related packages...\n")
+		relatedDeps, err := findRelatedDirectDependencies(goModPath, vuln.PkgName)
+		if err != nil {
+			return fmt.Errorf("failed to find related dependencies: %w", err)
+		}
+		directDeps = relatedDeps
+	}
+
 	if len(directDeps) == 0 {
 		return fmt.Errorf("could not find direct dependency that imports %s", vuln.PkgName)
 	}
 
+	// Try updating each related direct dependency until one succeeds in fixing the CVE
+	for _, directDep := range directDeps {
+		fmt.Printf("  📦 Trying to update related direct dep: %s\n", directDep)
+
+		if err := updateDirectDepAndVerify(goModPath, directDep, vuln, cfg); err != nil {
+			fmt.Printf("  ⚠️  Update via %s did not fix CVE: %v\n", directDep, err)
+			continue
+		}
+
+		// Check if the CVE is fixed
+		result, err := trivy.Scan(goModPath)
+		if err != nil {
+			continue
+		}
+
+		cveFixed := true
+		for _, v := range result.Vulnerabilities {
+			if v.VulnerabilityID == vuln.VulnerabilityID && v.PkgName == vuln.PkgName {
+				cveFixed = false
+				break
+			}
+		}
+
+		if cveFixed {
+			fmt.Printf("  ✅ CVE fixed by updating %s\n", directDep)
+			return nil
+		}
+	}
+
+	// If we have at least one direct dep, use the first one for the error message
 	directDep := directDeps[0]
 	fmt.Printf("  📦 Indirect dep %s is imported by direct dep: %s\n", vuln.PkgName, directDep)
 
@@ -148,4 +188,91 @@ func getBasePath(path string) string {
 		}
 	}
 	return path
+}
+
+// findRelatedDirectDependencies finds direct dependencies from the same org/namespace
+// as the vulnerable indirect dependency. This is useful when go mod why doesn't show
+// the import chain but we can infer that related packages might pull in the fix.
+// If no direct deps are found in the namespace, it falls back to updating indirect deps
+// from the same namespace.
+func findRelatedDirectDependencies(goModPath, indirectPkg string) ([]string, error) {
+	parser, err := gomod.NewParser(goModPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract the org/namespace from the indirect package
+	// e.g., github.com/sigstore/timestamp-authority -> github.com/sigstore
+	namespace := extractNamespace(indirectPkg)
+	if namespace == "" {
+		return nil, nil
+	}
+
+	// Get all direct dependencies
+	directDeps := parser.GetDirectDependencies()
+
+	// Filter to only those in the same namespace
+	var relatedDeps []string
+	for _, dep := range directDeps {
+		depNamespace := extractNamespace(dep.Path)
+		if depNamespace == namespace {
+			relatedDeps = append(relatedDeps, dep.Path)
+		}
+	}
+
+	// If no direct deps found, try indirect deps from the same namespace
+	// This handles cases where a module only has the sigstore packages as indirect
+	if len(relatedDeps) == 0 {
+		indirectDeps := parser.GetIndirectDependencies()
+		for _, dep := range indirectDeps {
+			// Skip the vulnerable package itself
+			if dep.Path == indirectPkg {
+				continue
+			}
+			depNamespace := extractNamespace(dep.Path)
+			if depNamespace == namespace {
+				relatedDeps = append(relatedDeps, dep.Path)
+			}
+		}
+	}
+
+	return relatedDeps, nil
+}
+
+// extractNamespace extracts the org/namespace from a module path
+// e.g., github.com/sigstore/timestamp-authority -> github.com/sigstore
+// e.g., golang.org/x/crypto -> golang.org/x
+// e.g., github.com/sigstore/cosign/v2/pkg/cosign -> github.com/sigstore
+func extractNamespace(modulePath string) string {
+	parts := strings.Split(modulePath, "/")
+	if len(parts) < 2 {
+		return ""
+	}
+
+	// For github.com/org/repo style paths, return github.com/org (first 2 parts)
+	// For golang.org/x/pkg style paths, return golang.org/x (first 2 parts)
+	// We want host/org, not host/org/repo
+	if len(parts) >= 2 {
+		return strings.Join(parts[:2], "/")
+	}
+	return parts[0]
+}
+
+// updateDirectDepAndVerify updates a direct dependency to latest and runs tidy
+func updateDirectDepAndVerify(goModPath, directDep string, vuln trivy.Vulnerability, cfg *config.Config) error {
+	moduleDir := gomod.GetModuleDir(goModPath)
+
+	// Update the direct dependency to latest
+	if err := gomod.GoGet(moduleDir, directDep, "latest"); err != nil {
+		return fmt.Errorf("failed to update %s: %w", directDep, err)
+	}
+
+	// Run go mod tidy
+	if !cfg.SkipTidy {
+		if err := gomod.ModTidy(moduleDir); err != nil {
+			return fmt.Errorf("go mod tidy failed: %w", err)
+		}
+	}
+
+	return nil
 }
