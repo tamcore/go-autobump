@@ -25,9 +25,30 @@ func Verify(goModPath string, cfg *config.Config) error {
 		return nil
 	}
 
-	// Report remaining vulnerabilities
-	fmt.Printf("  ⚠️  %d vulnerabilities still present after updates:\n", len(filtered.Vulnerabilities))
+	// Parse go.mod to check for major version modules
+	parser, _ := gomod.NewParser(goModPath)
+
+	// Filter out vulnerabilities where the major version module already exists
+	// AND the vulnerable v1 module is no longer present
+	var remaining []trivy.Vulnerability
 	for _, vuln := range filtered.Vulnerabilities {
+		if parser != nil && vuln.FixedVersion != "" {
+			if hasMajor, _, vulnStillPresent := parser.HasMajorVersionModule(vuln.PkgName, vuln.FixedVersion); hasMajor && !vulnStillPresent {
+				// Skip - already using major version module and v1 is gone
+				continue
+			}
+		}
+		remaining = append(remaining, vuln)
+	}
+
+	if len(remaining) == 0 {
+		fmt.Printf("  ✅ Verification passed: no vulnerabilities above CVSS %.1f\n", cfg.CVSSThreshold)
+		return nil
+	}
+
+	// Report remaining vulnerabilities
+	fmt.Printf("  ⚠️  %d vulnerabilities still present after updates:\n", len(remaining))
+	for _, vuln := range remaining {
 		status := "fixable"
 		if vuln.FixedVersion == "" {
 			status = "no fix available"

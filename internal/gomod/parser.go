@@ -299,10 +299,11 @@ func NormalizeVersion(version string) string {
 // For example, if vulnPkg is "github.com/foo/bar" (v1) and fixedVersion is "2.0.0",
 // this checks if "github.com/foo/bar/v2" exists in go.mod.
 // Go modules v2+ use semantic import versioning where the major version is part of the path.
-func (p *Parser) HasMajorVersionModule(vulnPkg, fixedVersion string) (bool, string) {
+// Returns (hasMajorVersion, majorVersionVersion, vulnModuleStillPresent)
+func (p *Parser) HasMajorVersionModule(vulnPkg, fixedVersion string) (bool, string, bool) {
 	fixedMajor := extractMajor(fixedVersion)
 	if fixedMajor < 2 {
-		return false, ""
+		return false, "", false
 	}
 
 	// Strip any existing version suffix from the package path (e.g., /v2, /v3)
@@ -311,13 +312,22 @@ func (p *Parser) HasMajorVersionModule(vulnPkg, fixedVersion string) (bool, stri
 	// Check if the target major version module exists
 	targetPath := fmt.Sprintf("%s/v%d", basePath, fixedMajor)
 
+	var hasMajorVersion bool
+	var majorVersionVersion string
+	var vulnModuleStillPresent bool
+
 	for _, req := range p.ModFile.Require {
 		if req.Mod.Path == targetPath {
-			return true, req.Mod.Version
+			hasMajorVersion = true
+			majorVersionVersion = req.Mod.Version
+		}
+		// Check if the vulnerable v1 module is still present
+		if req.Mod.Path == vulnPkg {
+			vulnModuleStillPresent = true
 		}
 	}
 
-	return false, ""
+	return hasMajorVersion, majorVersionVersion, vulnModuleStillPresent
 }
 
 // stripMajorVersionSuffix removes /v2, /v3, etc. from a module path

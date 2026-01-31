@@ -95,10 +95,11 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			}
 
 			// Check if the fixed major version module already exists in go.mod
+			// AND the vulnerable v1 module is no longer present
 			// This handles cases where e.g. github.com/foo/bar v1.x is vulnerable,
 			// fixed in v2.x, and github.com/foo/bar/v2 is already present
 			if parser != nil {
-				if hasMajor, existingVer := parser.HasMajorVersionModule(vuln.PkgName, vuln.FixedVersion); hasMajor {
+				if hasMajor, existingVer, vulnStillPresent := parser.HasMajorVersionModule(vuln.PkgName, vuln.FixedVersion); hasMajor && !vulnStillPresent {
 					fmt.Fprintf(os.Stderr, "  ✅ %s in %s: already using major version module at %s\n",
 						vuln.VulnerabilityID, vuln.PkgName, existingVer)
 					continue
