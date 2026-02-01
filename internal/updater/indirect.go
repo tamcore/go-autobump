@@ -317,15 +317,27 @@ func updateDirectDepAndVerify(goModPath, directDep string, vuln trivy.Vulnerabil
 	modulePath := importPathToModulePath(goModPath, directDep)
 
 	// Update the direct dependency to latest
-	if err := gomod.GoGet(moduleDir, modulePath, "latest"); err != nil {
-		return fmt.Errorf("failed to update %s: %w", modulePath, err)
-	}
+	// Note: go get might return an error even when the main package is updated,
+	// if unrelated transitive dependencies have issues (e.g., broken versioning).
+	// We'll attempt the update and let the caller verify if the CVE is actually fixed.
+	goGetErr := gomod.GoGet(moduleDir, modulePath, "latest")
 
-	// Run go mod tidy
+	// Run go mod tidy regardless of go get result to clean up the module state
 	if !cfg.SkipTidy {
 		if err := gomod.ModTidy(moduleDir); err != nil {
+			// If go get failed and tidy also failed, return the go get error
+			if goGetErr != nil {
+				return fmt.Errorf("failed to update %s: %w", modulePath, goGetErr)
+			}
 			return fmt.Errorf("go mod tidy failed: %w", err)
 		}
+	}
+
+	// If go get failed but tidy succeeded, we might still have made progress.
+	// The caller will verify if the CVE is actually fixed.
+	// Only return error if tidy was skipped and go get failed.
+	if goGetErr != nil && cfg.SkipTidy {
+		return fmt.Errorf("failed to update %s: %w", modulePath, goGetErr)
 	}
 
 	return nil
